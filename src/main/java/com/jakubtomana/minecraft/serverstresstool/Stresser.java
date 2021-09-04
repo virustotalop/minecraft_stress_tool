@@ -8,12 +8,11 @@ import com.github.steveice10.mc.protocol.packet.ingame.client.ClientSettingsPack
 import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerPositionPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.client.world.ClientTeleportConfirmPacket;
 import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerPositionRotationPacket;
-import com.github.steveice10.packetlib.Client;
 import com.github.steveice10.packetlib.Session;
 import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
 import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
 import com.github.steveice10.packetlib.event.session.SessionAdapter;
-import com.github.steveice10.packetlib.tcp.TcpSessionFactory;
+import com.github.steveice10.packetlib.tcp.TcpClientSession;
 
 import java.util.ArrayList;
 import java.util.concurrent.Executors;
@@ -25,7 +24,7 @@ public class Stresser {
 
     //Final variables
     private final int threadsNum;
-    private final String serverAdress;
+    private final String serverAddress;
     private final int port;
     private final String nick;
     private final int delay;
@@ -35,7 +34,7 @@ public class Stresser {
      * Creates new stresser object (with register and login)
      */
     public Stresser(String serverAdress, int port, int threadsNum, String nick, int delay) {
-        this.serverAdress = serverAdress;
+        this.serverAddress = serverAdress;
         this.port = port;
         this.nick = nick;
         this.threadsNum = threadsNum;
@@ -59,9 +58,8 @@ public class Stresser {
 
     private void joinserver(int id) {
         MinecraftProtocol protocol = new MinecraftProtocol(nick + id);
-        Client client = new Client(serverAdress, port, protocol, new TcpSessionFactory());
-        client.getSession().addListener(new SessionAdapter() {
-
+        TcpClientSession client = new TcpClientSession(serverAddress, port, protocol);
+        client.addListener(new SessionAdapter() {
             boolean scheduled = false;
             float x = 0;
             float z = 0;
@@ -77,9 +75,12 @@ public class Stresser {
 
                     session.send(new ClientTeleportConfirmPacket(packet.getTeleportId()));
                     if (!scheduled) {
-                        session.send(new ClientSettingsPacket("fr_fr", 8,
-                                ChatVisibility.FULL, true,
-                                new ArrayList<>(), HandPreference.RIGHT_HAND));
+                        session.send(new ClientSettingsPacket("en_US", 8,
+                                ChatVisibility.FULL,
+                                true,
+                                new ArrayList<>(),
+                                HandPreference.RIGHT_HAND,
+                                true));
 
                         e.scheduleAtFixedRate(() -> {
                             x += ThreadLocalRandom.current().nextBoolean() ? 0.25f : -0.25f;
@@ -101,7 +102,6 @@ public class Stresser {
             }
         });
 
-        client.getSession().connect(false);
+        client.connect(false);
     }
-
 }

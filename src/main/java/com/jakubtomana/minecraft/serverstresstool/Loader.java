@@ -3,9 +3,8 @@ package com.jakubtomana.minecraft.serverstresstool;
 import org.apache.commons.cli.*;
 
 public class Loader {
-    public static void main(String[] args)
-    {
-        //Stresser st = new Stresser("survivalcore.eu",25565,20,"bottest",5000);
+
+    public static void main(String[] args) {
         Options options = new Options();
 
         Option serverAdress = new Option("a", "ip", true, "server adress");
