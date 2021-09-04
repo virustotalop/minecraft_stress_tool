@@ -1,19 +1,18 @@
 package com.jakubtomana.minecraft.serverstresstool;
 
-
+import com.github.steveice10.mc.auth.service.SessionService;
+import com.github.steveice10.mc.protocol.ClientListener;
+import com.github.steveice10.mc.protocol.MinecraftConstants;
 import com.github.steveice10.mc.protocol.MinecraftProtocol;
-import com.github.steveice10.mc.protocol.data.game.entity.player.HandPreference;
-import com.github.steveice10.mc.protocol.data.game.setting.ChatVisibility;
-import com.github.steveice10.mc.protocol.packet.ingame.client.ClientSettingsPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.client.player.ClientPlayerPositionPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.client.world.ClientTeleportConfirmPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.server.entity.player.ServerPlayerPositionRotationPacket;
+import com.github.steveice10.mc.protocol.data.SubProtocol;
+import com.github.steveice10.mc.protocol.packet.ingame.client.ClientChatPacket;
+import com.github.steveice10.mc.protocol.packet.ingame.server.ServerJoinGamePacket;
 import com.github.steveice10.packetlib.Session;
-import com.github.steveice10.packetlib.event.session.DisconnectedEvent;
 import com.github.steveice10.packetlib.event.session.PacketReceivedEvent;
 import com.github.steveice10.packetlib.event.session.SessionAdapter;
 import com.github.steveice10.packetlib.tcp.TcpClientSession;
 
+import java.net.Proxy;
 import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -28,7 +27,7 @@ public class Stresser {
     private final int port;
     private final String nick;
     private final int delay;
-    private final ScheduledExecutorService e = Executors.newScheduledThreadPool(3);
+    private final ScheduledExecutorService pool;
 
     /**
      * Creates new stresser object (with register and login)
@@ -39,6 +38,7 @@ public class Stresser {
         this.nick = nick;
         this.threadsNum = threadsNum;
         this.delay = delay;
+        this.pool = Executors.newScheduledThreadPool(this.threadsNum);
     }
 
     /**
@@ -57,51 +57,13 @@ public class Stresser {
     }
 
     private void joinserver(int id) {
-        MinecraftProtocol protocol = new MinecraftProtocol(nick + id);
-        TcpClientSession client = new TcpClientSession(serverAddress, port, protocol);
-        client.addListener(new SessionAdapter() {
-            boolean scheduled = false;
-            float x = 0;
-            float z = 0;
-
-            @Override
-            public void packetReceived(PacketReceivedEvent event) {
-                if (event.getPacket() instanceof ServerPlayerPositionRotationPacket) {
-                    final ServerPlayerPositionRotationPacket packet = event.getPacket();
-                    final Session session = event.getSession();
-                    System.out.println("Connected");
-                    x = (float) packet.getX();
-                    z = (float) packet.getZ();
-
-                    session.send(new ClientTeleportConfirmPacket(packet.getTeleportId()));
-                    if (!scheduled) {
-                        session.send(new ClientSettingsPacket("en_US", 8,
-                                ChatVisibility.FULL,
-                                true,
-                                new ArrayList<>(),
-                                HandPreference.RIGHT_HAND,
-                                true));
-
-                        e.scheduleAtFixedRate(() -> {
-                            x += ThreadLocalRandom.current().nextBoolean() ? 0.25f : -0.25f;
-                            z += ThreadLocalRandom.current().nextBoolean() ? 0.25f : -0.25f;
-                            session.send(new ClientPlayerPositionPacket(false, x, 70, z));
-                        }, 0, 100, TimeUnit.MILLISECONDS);
-                        scheduled = true;
-
-                    }
-                }
-            }
-
-            @Override
-            public void disconnected(DisconnectedEvent event) {
-                System.out.println("Disconnected: " + event.getReason());
-                if (event.getCause() != null) {
-                    event.getCause().printStackTrace();
-                }
-            }
-        });
-
-        client.connect(false);
+        String username = this.nick + id;
+        SessionService sessionService = new SessionService();
+        sessionService.setProxy(Proxy.NO_PROXY);
+        MinecraftProtocol protocol = new MinecraftProtocol(username);
+        System.out.println(this.serverAddress + ":" + this.port);
+        Session client = new TcpClientSession(this.serverAddress, this.port, protocol);
+        client.connect();
+        protocol.newClientSession(client);
     }
 }

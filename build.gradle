@@ -16,6 +16,9 @@ repositories {
     maven { url 'https://jitpack.io' }
 }
 
+run {
+	args = ["-a", "127.0.0.1", "-p", "25565", "-d", "200", "-t", "400", "-n", "bot"]
+}
 
 shadowJar {
 	archiveBaseName.set('MinecraftStressTool')
