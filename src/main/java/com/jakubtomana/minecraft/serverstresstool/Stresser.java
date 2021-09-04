@@ -14,6 +14,7 @@ import com.github.steveice10.packetlib.tcp.TcpClientSession;
 
 import java.net.Proxy;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -27,7 +28,7 @@ public class Stresser {
     private final int port;
     private final String nick;
     private final int delay;
-    private final ScheduledExecutorService pool;
+    private final ExecutorService pool;
 
     /**
      * Creates new stresser object (with register and login)
@@ -38,7 +39,7 @@ public class Stresser {
         this.nick = nick;
         this.threadsNum = threadsNum;
         this.delay = delay;
-        this.pool = Executors.newScheduledThreadPool(this.threadsNum);
+        this.pool = Executors.newCachedThreadPool(Executors.defaultThreadFactory());
     }
 
     /**
@@ -57,13 +58,28 @@ public class Stresser {
     }
 
     private void joinserver(int id) {
-        String username = this.nick + id;
-        SessionService sessionService = new SessionService();
-        sessionService.setProxy(Proxy.NO_PROXY);
-        MinecraftProtocol protocol = new MinecraftProtocol(username);
-        System.out.println(this.serverAddress + ":" + this.port);
-        Session client = new TcpClientSession(this.serverAddress, this.port, protocol);
-        client.connect();
-        protocol.newClientSession(client);
+        this.pool.execute(() -> {
+            String username = this.nick + id;
+            SessionService sessionService = new SessionService();
+            sessionService.setProxy(Proxy.NO_PROXY);
+            MinecraftProtocol protocol = new MinecraftProtocol(username);
+            System.out.println(this.serverAddress + ":" + this.port);
+            Session client = new TcpClientSession(this.serverAddress, this.port, protocol);
+            client.setFlag(MinecraftConstants.SESSION_SERVICE_KEY, sessionService);
+            client.addListener(new SessionAdapter() {
+                @Override
+                public void packetReceived(PacketReceivedEvent event) {
+                    if(event.getPacket() instanceof ServerJoinGamePacket) {
+                        try {
+                            Thread.sleep(1000);
+                        } catch(InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        client.disconnect("bye");
+                    }
+                }
+            });
+            client.connect();
+        });
     }
 }
