@@ -1,44 +1,28 @@
-group 'com.jakubtomana.minecraft.serverstresstool'
-version '1.0.2'
+plugins {
+	id 'java'
+	id 'com.github.johnrengelman.shadow' version '5.0.0'
+	id 'eclipse'
+	id 'idea'
+}
 
-apply plugin: 'java'
-apply plugin: 'application'
-sourceCompatibility = 1.8
-mainClassName='com.jakubtomana.minecraft.serverstresstool.Loader'
+version = '1.2.0'
+sourceCompatibility = '1.11'
+targetCompatibility = '1.11'
+mainClassName = 'com.jakubtomana.minecraft.serverstresstool.Loader'
 
 repositories {
-    mavenLocal()
     mavenCentral()
     maven { url 'https://jitpack.io' }
 }
 
+
+shadowJar {
+	archiveBaseName.set('MinecraftStressTool')
+	archiveClassifier.set('')
+}
+
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.12'
-    compile 'com.github.Eoghanmc22:McPacketLib:e6af0f7876'
-    compile 'com.github.Eoghanmc22:packets:6383f00cff'
-    // https://mvnrepository.com/artifact/commons-cli/commons-cli
-    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
-}
-
-jar{
-    manifest{
-        attributes 'Main-Class' : 'com.jakubtomana.minecraft.serverstresstool.Loader'
-    }
-}
-
-task fatJar(type: Jar) {
-    manifest {
-        attributes 'Implementation-Title': 'Gradle Jar File Example',
-                'Implementation-Version': version,
-                'Main-Class' : 'com.jakubtomana.minecraft.serverstresstool.Loader'
-    }
-    baseName = project.name + '-all'
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-    with jar
-}
-
-run{
-    if (project.hasProperty("appArgs")) {
-        args Eval.me(appArgs)
-    }
+    compile 'com.github.Steveice10:MCProtocolLib:1.17.1-1'
+    compile 'com.github.Steveice10:PacketLib:2.0'
+    compile 'commons-cli:commons-cli:1.4'
 }
